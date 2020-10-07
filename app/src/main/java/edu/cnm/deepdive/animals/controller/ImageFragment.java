@@ -63,49 +63,49 @@ public class ImageFragment extends Fragment {
     Random rng = new Random();
     final String imageUrl = animals.get(rng.nextInt(animals.size())).getImageUrl();
     contentView.loadUrl(imageUrl);
+  }
 
-    private class RetrieverTask extends AsyncTask<Void,Void,List<Animals>> {
+  private class RetrieverTask extends AsyncTask<Void, Void, List<Animals>> {
 
-      private AnimalService animalService;
+    private AnimalService animalService;
 
-      @Override
-      protected void onPreExecute() {
-        super.onPreExecute();
-        Gson gson = new GsonBuilder()
-            .create();
-        Retrofit retrofit = new Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build();
-        AnimalService animalService = retrofit.create(AnimalService.class);
-      }
-
-      @Override
-      protected List<Animals> doInBackground(Void... voids) {
-        try {
-          Response<ApiKey> keyResponse = animalService.getApiKey().execute();
-          ApiKey key = keyResponse.body();
-          assert key != null;
-          final String clientKey = key.getKey();
-
-          Response<List<Animals>> listResponse = animalService.getAnimals(clientKey).execute();
-          List<Animals> animalList = listResponse.body();
-          assert animalList != null;
-
-
-        } catch (IOException e) {
-          Log.e("AnimalService", e.getMessage(), e);
-          cancel(true);
-        }
-        return null;
-      }
-
-      @Override
-      protected void onPostExecute(List<Animals> animalsList) {
-        animals =animalsList;
-        ramdomize(animalsList);
-      }
+    @Override
+    protected void onPreExecute() {
+      super.onPreExecute();
+      Gson gson = new GsonBuilder()
+          .create();
+      Retrofit retrofit = new Retrofit.Builder()
+          .baseUrl(BuildConfig.BASE_URL)
+          .addConverterFactory(GsonConverterFactory.create(gson))
+          .build();
+      animalService = retrofit.create(AnimalService.class);
     }
 
+    @Override
+    protected List<Animals> doInBackground(Void... voids) {
+      try {
+        Response<ApiKey> keyResponse = animalService.getApiKey().execute();
+        ApiKey key = keyResponse.body();
+        assert key != null;
+        final String clientKey = key.getKey();
+
+        Response<List<Animals>> listResponse = animalService.getAnimals(clientKey).execute();
+        List<Animals> animalList = listResponse.body();
+        assert animalList != null;
+        return animalList;
+
+      } catch (IOException e) {
+        Log.e("AnimalService", e.getMessage(), e);
+        cancel(true);
+      }
+      return null;
+    }
+
+    @Override
+    protected void onPostExecute(List<Animals> animalsList) {
+      animals = animalsList;
+      ramdomize();
+    }
   }
+
 }
