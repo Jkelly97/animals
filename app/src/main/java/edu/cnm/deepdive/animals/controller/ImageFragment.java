@@ -30,14 +30,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class ImageFragment extends Fragment {
 
   private WebView contentView;
-  private List<Animals> animals;
 
   @Override
   public View onCreateView(LayoutInflater inflater, ViewGroup container,
       Bundle savedInstanceState) {
     View root = inflater.inflate(R.layout.fragment_image, container, false);
     setupWebView(root);
-    root.findViewById(R.id.randomize).setOnClickListener((v) -> ramdomize());
     return root;
   }
 
@@ -59,11 +57,6 @@ public class ImageFragment extends Fragment {
     new RetrieverTask().execute();
   }
 
-  private void ramdomize() {
-    Random rng = new Random();
-    final String imageUrl = animals.get(rng.nextInt(animals.size())).getImageUrl();
-    contentView.loadUrl(imageUrl);
-  }
 
   private class RetrieverTask extends AsyncTask<Void, Void, List<Animals>> {
 
@@ -103,8 +96,9 @@ public class ImageFragment extends Fragment {
 
     @Override
     protected void onPostExecute(List<Animals> animalsList) {
-      animals = animalsList;
-      ramdomize();
+      Random rng = new Random();
+      final String imageUrl = animalsList.get(rng.nextInt(animalsList.size())).getImageUrl();
+      contentView.loadUrl(imageUrl);
     }
   }
 
