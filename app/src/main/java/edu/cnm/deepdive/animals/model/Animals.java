@@ -4,17 +4,17 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 public class Animals {
-@Expose
+  @Expose
   private String name;
-@Expose
+  @Expose
   private Taxonomy taxonomy;
-@Expose
+  @Expose
   private String location;
-@Expose
+  @Expose
   private Speed speed;
-@Expose
+  @Expose
   private String diet;
-@Expose
+  @Expose
   private String lifespan;
 
   @SerializedName("image")
