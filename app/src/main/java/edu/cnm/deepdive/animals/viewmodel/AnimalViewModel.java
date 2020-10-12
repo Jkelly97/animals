@@ -28,6 +28,7 @@ public class AnimalViewModel extends AndroidViewModel {
       @NonNull Application application) {
     super(application);
     animals = new MutableLiveData<>();
+    loadAnimals();
   }
 
   public LiveData<List<Animals>> getAnimals() {
