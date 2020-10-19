@@ -14,6 +14,8 @@ import edu.cnm.deepdive.animals.BuildConfig;
 import edu.cnm.deepdive.animals.model.Animals;
 import edu.cnm.deepdive.animals.model.ApiKey;
 import edu.cnm.deepdive.animals.service.AnimalService;
+import io.reactivex.Scheduler;
+import io.reactivex.schedulers.Schedulers;
 import java.io.IOException;
 import java.util.List;
 import retrofit2.Response;
@@ -23,11 +25,15 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class AnimalViewModel extends AndroidViewModel {
 
   private MutableLiveData<List<Animals>> animals;
+  private final MutableLiveData<Throwable> throwable;
+  private final AnimalService animalService;
 
   public AnimalViewModel(
       @NonNull Application application) {
     super(application);
     animals = new MutableLiveData<>();
+    throwable = new MutableLiveData<>();
+    animalService = AnimalService.getInstance();
     loadAnimals();
   }
 
@@ -35,49 +41,21 @@ public class AnimalViewModel extends AndroidViewModel {
     return animals;
   }
 
+  public MutableLiveData<Throwable> getThrowable() {
+    return throwable;
+  }
+
   @SuppressLint("StaticFieldLeak")
   private void loadAnimals() {
 
-    new AsyncTask<Void, Void, List<Animals>>() {
+    animalService.getApiKey()
+        .subscribeOn(Schedulers.io())
+        .flatMap((key) -> animalService.getAnimals(key.getKey()))
+        .subscribe(
+            animals::postValue,
+            throwable::postValue
+        );
 
-      AnimalService animalService;
-
-      @Override
-      protected void onPreExecute() {
-        super.onPreExecute();
-        Gson gson = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
-        Retrofit retrofit = new Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build();
-
-        animalService = retrofit.create(AnimalService.class);
-      }
-
-      @Override
-      protected List<Animals> doInBackground(Void... voids) {
-
-        try {
-
-          Response<ApiKey> apiKeyResponse = animalService.getApiKey().execute();
-          ApiKey apiKey = apiKeyResponse.body();
-          final String key = apiKey.getKey();
-
-          Response<List<Animals>> animalResponse = animalService.getAnimals(key).execute();
-          List<Animals> animals = animalResponse.body();
-          AnimalViewModel.this.animals.postValue(animals);
-          return animals;
-
-        } catch (IOException e) {
-          Log.e("AnimalService", e.getMessage(), e);
-          cancel(true);
-        }
-
-        return null;
-      }
-    }.execute();
   }
 }
 
