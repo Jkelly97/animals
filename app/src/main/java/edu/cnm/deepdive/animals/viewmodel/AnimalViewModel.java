@@ -2,32 +2,34 @@ package edu.cnm.deepdive.animals.viewmodel;
 
 import android.annotation.SuppressLint;
 import android.app.Application;
-import android.os.AsyncTask;
-import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
+import androidx.lifecycle.Lifecycle.Event;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import edu.cnm.deepdive.animals.BuildConfig;
+import androidx.lifecycle.OnLifecycleEvent;
 import edu.cnm.deepdive.animals.model.Animals;
-import edu.cnm.deepdive.animals.model.ApiKey;
-import edu.cnm.deepdive.animals.service.AnimalService;
-import java.io.IOException;
+import edu.cnm.deepdive.animals.service.AnimalsRepository;
+import io.reactivex.disposables.CompositeDisposable;
 import java.util.List;
-import retrofit2.Response;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 public class AnimalViewModel extends AndroidViewModel {
 
-  private MutableLiveData<List<Animals>> animals;
+  private final MutableLiveData<List<Animals>> animals;
+  private final MutableLiveData<Integer> selectedItem;
+  private final MutableLiveData<Throwable> throwable;
+  private final AnimalsRepository animalsRepository;
+  private final CompositeDisposable pending;
 
   public AnimalViewModel(
       @NonNull Application application) {
     super(application);
     animals = new MutableLiveData<>();
+    selectedItem = new MutableLiveData<>();
+    throwable = new MutableLiveData<>();
+//    animalService = AnimalService.getInstance();
+    animalsRepository = new AnimalsRepository(application);
+    pending = new CompositeDisposable();
     loadAnimals();
   }
 
@@ -35,49 +37,29 @@ public class AnimalViewModel extends AndroidViewModel {
     return animals;
   }
 
-  @SuppressLint("StaticFieldLeak")
+  public LiveData<Integer> getSelectedItem() {
+    return selectedItem;
+  }
+
+  public void select(int index) {
+    selectedItem.setValue(index);
+  }
+
+  public LiveData<Throwable> getThrowable() {
+    return throwable;
+  }
+
+  @SuppressLint("CheckResult")
   private void loadAnimals() {
+    animalsRepository.loadAnimals()
+        .subscribe(
+            animals::postValue,
+            throwable::postValue
+        );
+  }
 
-    new AsyncTask<Void, Void, List<Animals>>() {
-
-      AnimalService animalService;
-
-      @Override
-      protected void onPreExecute() {
-        super.onPreExecute();
-        Gson gson = new GsonBuilder()
-            .excludeFieldsWithoutExposeAnnotation()
-            .create();
-        Retrofit retrofit = new Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build();
-
-        animalService = retrofit.create(AnimalService.class);
-      }
-
-      @Override
-      protected List<Animals> doInBackground(Void... voids) {
-
-        try {
-
-          Response<ApiKey> apiKeyResponse = animalService.getApiKey().execute();
-          ApiKey apiKey = apiKeyResponse.body();
-          final String key = apiKey.getKey();
-
-          Response<List<Animals>> animalResponse = animalService.getAnimals(key).execute();
-          List<Animals> animals = animalResponse.body();
-          AnimalViewModel.this.animals.postValue(animals);
-          return animals;
-
-        } catch (IOException e) {
-          Log.e("AnimalService", e.getMessage(), e);
-          cancel(true);
-        }
-
-        return null;
-      }
-    }.execute();
+  @OnLifecycleEvent(Event.ON_STOP)
+  private void clearPending() {
+    pending.clear();
   }
 }
-
